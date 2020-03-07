@@ -27,7 +27,47 @@ And here’s the snippet to format the date properly:
 ```kotlin
 return try {
     SimpleDateFormat("dd/MM/yyyy' at 'HH:mm", Locale.getDefault()).format(Date(date))
-} catch (e: Exception) {
+} catch (e: ParseException) {
     null // Do proper error handling
 }
 ```
+
+## Lesson 2 - SimpleDateFormat makes a comeback!
+
+Let's make this lesson as a bonus on SimpleDateFormat (and hopefully forget it for a long time!)
+
+> SimpleDateFormat is *lenient* by default. It may not throw an exception even if the template does not match completely the preset pattern.
+
+Let's say we have this code:
+
+```kotlin
+val format = SimpleDateFormat("MM/dd/yyyy") // expected input: "02/20/2020"
+try {
+    val date = format.parse("2020/02/20") // wrong input
+    println(date)        
+} catch (e: ParseException) {
+    println("Exception!")
+}
+```
+
+What would you expect as output? `Exception!`? Well, me too. But we'd be wrong. This code prints a completely wrong date: `Tue Apr 02 00:00:00 UTC 188`.
+
+This example is obviously wrong and even without exceptions, it's easy to catch with the most basic testing. However, depending on the combination of the expected template and given input, the error may not be as visible, and thus, harder to catch (think milliseconds).
+
+By being lenient, SimpleDateFormat allows our code to get away with some inconsistencies without us realizing it. But that's not what we really want, is it? We want to always show consistent information (and **fail properly** otherwise!).
+
+If we tweak the code above just setting the leniency to false, it makes the date parsing much more strict and consistent with what we expected initially:
+
+```kotlin
+val format = SimpleDateFormat("MM/dd/yyyy") 
+format.isLenient = false // strict parsing
+try {
+    val date = format.parse("2020/02/20") // wrong input
+    println(date)        
+} catch (e: ParseException) {
+    println("Exception!")
+}
+// outputs: Exception!
+```
+
+The leniency of SimpleDateFormat exists because it relies on the `Calendar` implementation, which defaults its leniency to `true`. You can find more information in the [official documentation](https://docs.oracle.com/javase/7/docs/api/java/util/Calendar.html).
