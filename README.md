@@ -50,9 +50,9 @@ try {
 }
 ```
 
-What would you expect as output? `Exception!`? Well, me too. But we'd be wrong. This code prints a completely wrong date: `Tue Apr 02 00:00:00 UTC 188`.
+What would you expect as output? `Exception!`? Well, me too. But we'd be wrong. This code prints a completely unexpected date: `Tue Apr 02 00:00:00 UTC 188`.
 
-This example is obviously wrong and even without exceptions, it's easy to catch with the most basic testing. However, depending on the combination of the expected template and given input, the error may not be as visible, and thus, harder to catch (think milliseconds).
+From this example only, it would be easy to check, with the most basic testing, that the result is not what we wanted, even without exceptions. However, depending on the combination of the expected template and given input, the error may not be as visible, and thus, harder to catch (think *milliseconds*).
 
 By being lenient, SimpleDateFormat allows our code to get away with some inconsistencies without us realizing it. But that's not what we really want, is it? We want to always show consistent information (and **fail properly** otherwise!).
 
@@ -71,3 +71,34 @@ try {
 ```
 
 The leniency of SimpleDateFormat exists because it relies on the `Calendar` implementation, which defaults its leniency to `true`. You can find more information in the [official documentation](https://docs.oracle.com/javase/7/docs/api/java/util/Calendar.html).
+
+## Lesson 3 - Parsing microseconds on Android
+
+Imagine you have to parse a string that represents a date. The string follows the ISO-8601 format and has a microsecond precision. What do you do? Which API do you use?
+
+If you thought about `SimpleDateFormat`, well, think again.
+
+> SimpleDateFormat provides support only up to milliseconds. To parse dates that have microseconds or nanoseconds precision, you need to use the JSR-310 Date/Time API.
+
+That's right.
+
+Let's say you receive as an input a String such as `2019-12-30T15:26:22.23879Z`. One option would be to use:
+
+```kotlin
+val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {	
+  timeZone = TimeZone.getTimeZone("UTC")	
+}
+format.parse(dateFormat)
+```
+
+And that would work. *Almost*. The result would be pretty close to the correct date, but that's because of the **leniency** mentioned in the previous lesson. When unit testing, you would see that the output can have a variation of a few minutes from the date given as the input.
+
+Instead, you should use the JSR-310 API, or the [backport of it for Android](https://github.com/JakeWharton/ThreeTenABP) created by Jake Wharton. For that particular example, the class that fits the best is `Instant` and the code would look like this:
+
+```
+Instant.parse(dateFormat).atOffset(ZoneOffset.UTC)
+```
+
+No need for custom templates. It just works.
+
+Now, just handle the exceptions, create your unit tests, and release.
